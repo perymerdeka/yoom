@@ -57,7 +57,6 @@ const MobileNav = () => {
                     </div>
                 </SheetContent>
             </Sheet>
-
         </section>
     )
 }

@@ -9,6 +9,9 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Yoom App",
   description: "Video conference app",
+  icons: {
+    icon: "/icons/logo.svg"
+  }
 };
 
 import { Toaster } from "@/components/ui/toaster"

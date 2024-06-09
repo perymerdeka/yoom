@@ -25,6 +25,11 @@ export const sidebarLinks = [
         label: "Recordings",
         route: "/recordings",
     },
+    {
+        imgUrl: "/icons/Video.svg",
+        label: "RTC",
+        route: "/rtc",
+    },
 ]
 
 export const avatarImages = [

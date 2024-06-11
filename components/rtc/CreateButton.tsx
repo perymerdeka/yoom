@@ -2,13 +2,23 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Button } from '../components/Button';
-import { useSocket } from '../context/SocketContext';
-import create
+
+import { useSocket } from '@/providers/SocketClientProvider';
+import { Button } from '../ui/button';
+
 
 const CreateRoomButton: React.FC = () => {
   const { ws } = useSocket();
   const [roomId, setRoomId] = useState<string>('');
+
+  const createRoom = (roomId: string) => {
+    if (ws && ws.connected) {
+      console.log('Emitting create-room event');
+      ws.emit('create-room', roomId);
+    } else {
+      console.error('WebSocket connection is not available or not connected');
+    }
+  };
 
   const handleCreateRoom = () => {
     if (ws && ws.connected) {

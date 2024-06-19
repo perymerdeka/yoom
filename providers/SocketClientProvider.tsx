@@ -23,6 +23,9 @@ export const SocketContext = createContext<SocketContextType>(defaultValue);
 // Define the provider component
 export const SocketClientProvider = ({ children }: { children: ReactNode }) => {
   const [ws, setWs] = useState<Socket | null>(null);
+  const enterRoom = ({ roomId }: { roomId: string }) => {
+    console.log(roomId)
+  };
 
   useEffect(() => {
     const socket = socketIOClient(socketUrl, {
@@ -43,6 +46,10 @@ export const SocketClientProvider = ({ children }: { children: ReactNode }) => {
       console.log('Socket disconnected:', reason);
       setWs(null);
     });
+
+    // Enter the room
+    socket.on('room-created', () => enterRoom);
+
 
     // Clean up the connection when the component unmounts
     return () => {

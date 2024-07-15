@@ -3,8 +3,8 @@
 import React, { useState } from 'react';
 import HomeCard from '../HomeCard';
 import MeetingModal from '../MeetingModal';
-import { createMeeting } from '@/lib/api';
 import { useRouter } from 'next/navigation';
+import { createMeeting } from '@/lib/api';
 
 const RtcMeetingTypeList: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -12,7 +12,6 @@ const RtcMeetingTypeList: React.FC = () => {
   const router = useRouter();
 
   const handleModalOpen = () => {
-    console.log('Modal opened');
     setIsModalOpen(true);
   };
 
@@ -22,10 +21,8 @@ const RtcMeetingTypeList: React.FC = () => {
 
   const handleStartMeeting = async () => {
     setLoading(true);
-    console.log('Starting meeting...');
     try {
       const meetingId = await createMeeting();
-      console.log('Meeting ID:', meetingId); // Debug log
       router.push(`/rtc/meeting/${meetingId}`);
     } catch (error) {
       console.error('Failed to start meeting', error);

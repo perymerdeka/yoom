@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useParams } from 'next/navigation';
 import RtcMeetingSetup from '@/components/rtc/RtcMeetingSetup';
 import RtcMeetingRoom from '@/components/rtc/RtcMeetingRoom';
+import { SocketClientProvider } from '@/providers/SocketClientProvider';
 
 const RtcMeetingPage: React.FC = () => {
   const params = useParams();
@@ -15,13 +16,15 @@ const RtcMeetingPage: React.FC = () => {
   };
 
   return (
-    <div className='flex flex-col items-center justify-center min-h-screen bg-gray-900 text-white p-4'>
-      {isSetupComplete ? (
-        <RtcMeetingRoom meetingId={meetingId} />
-      ) : (
-        <RtcMeetingSetup meetingId={meetingId} onSetupComplete={handleSetupComplete} />
-      )}
-    </div>
+    <SocketClientProvider>
+      <main className='h-screen w-full'>
+        {isSetupComplete ? (
+          <RtcMeetingRoom meetingId={meetingId} />
+        ) : (
+          <RtcMeetingSetup meetingId={meetingId} onSetupComplete={handleSetupComplete} />
+        )}
+      </main>
+    </SocketClientProvider>
   );
 };
 

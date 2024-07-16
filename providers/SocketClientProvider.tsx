@@ -1,20 +1,21 @@
-// context/SocketContext.tsx
 'use client';
 
 import { createContext, ReactNode, useEffect, useState, useContext } from "react";
-import socketIOClient, { Socket } from 'socket.io-client';
+import { io, Socket } from 'socket.io-client';
 
-// Define the URL for the socket connection
-const socketUrl = "http://localhost:8000";
+// Get the socket URL from environment variables, with a default fallback
+const socketUrl: string = process.env.NEXT_PUBLIC_BACKEND_SOCKET_URL || "http://localhost:3000";
 
 // Define the type for the context
 interface SocketContextType {
   ws: Socket | null;
+  joinRoom: (roomId: string, userId: string) => void;
 }
 
 // Create a default value for the context
 const defaultValue: SocketContextType = {
   ws: null,
+  joinRoom: () => {},
 };
 
 // Create the context with the default value
@@ -23,12 +24,15 @@ export const SocketContext = createContext<SocketContextType>(defaultValue);
 // Define the provider component
 export const SocketClientProvider = ({ children }: { children: ReactNode }) => {
   const [ws, setWs] = useState<Socket | null>(null);
-  const enterRoom = ({ roomId }: { roomId: string }) => {
-    console.log(roomId)
+
+  const joinRoom = (roomId: string, userId: string) => {
+    if (ws) {
+      ws.emit('join-room', roomId, userId);
+    }
   };
 
   useEffect(() => {
-    const socket = socketIOClient(socketUrl, {
+    const socket = io(socketUrl, {
       transports: ['websocket'],
       reconnectionAttempts: 5,
     });
@@ -47,10 +51,6 @@ export const SocketClientProvider = ({ children }: { children: ReactNode }) => {
       setWs(null);
     });
 
-    // Enter the room
-    socket.on('room-created', () => enterRoom);
-
-
     // Clean up the connection when the component unmounts
     return () => {
       socket.disconnect();
@@ -58,7 +58,7 @@ export const SocketClientProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   return (
-    <SocketContext.Provider value={{ ws }}>
+    <SocketContext.Provider value={{ ws, joinRoom }}>
       {children}
     </SocketContext.Provider>
   );

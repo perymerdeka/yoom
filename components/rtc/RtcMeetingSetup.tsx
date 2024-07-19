@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import RtcVideoPreview from './RtcVideoPreview';
 import { Button } from '../ui/button';
 import { useSocket } from '@/providers/SocketClientProvider';
+import { useUser } from '@clerk/clerk-react';
 
 interface RtcMeetingSetupProps {
   meetingId: string;
@@ -11,21 +12,22 @@ interface RtcMeetingSetupProps {
 }
 
 const RtcMeetingSetup: React.FC<RtcMeetingSetupProps> = ({ meetingId, onSetupComplete }) => {
+  const { user } = useUser();
   const [isCameraOn, setIsCameraOn] = useState(true);
   const [isMicOn, setIsMicOn] = useState(true);
   const { ws, joinRoom } = useSocket();
-  const [userId, setUserId] = useState<string>('');
+  const [userId, setUserId] = useState<string>(user?.id || '');
+  const [userName, setUserName] = useState<string>(user?.username || 'Anonymous');
 
   useEffect(() => {
-    // Simulate user ID for the sake of this example
-    const generatedUserId = 'user-' + Math.random().toString(36).substr(2, 9);
-    setUserId(generatedUserId);
-  }, []);
+    setUserId(user?.id || 'user-' + Math.random().toString(36).substring(2, 9));
+    setUserName(user?.username || 'Anonymous');
+  }, [user]);
 
   const handleJoinMeeting = () => {
     if (ws && userId) {
-      console.log('Joining meeting', meetingId, userId);
-      joinRoom(meetingId, userId); // Emit join-room event
+      joinRoom(meetingId, { userId, userName });
+      console.log('Joining room:', meetingId, userId);
       onSetupComplete();
     }
   };
@@ -46,7 +48,7 @@ const RtcMeetingSetup: React.FC<RtcMeetingSetupProps> = ({ meetingId, onSetupCom
         isMicOn={isMicOn}
         onToggleCamera={handleCameraToggle}
         onToggleMic={handleMicToggle}
-        userName="Feri Lukmansyah"
+        userName={userName}
       />
       <div className="flex gap-4 mt-6">
         <Button

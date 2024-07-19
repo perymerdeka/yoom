@@ -3,31 +3,31 @@
 import { createContext, ReactNode, useEffect, useState, useContext } from "react";
 import { io, Socket } from 'socket.io-client';
 
-// Get the socket URL from environment variables, with a default fallback
-const socketUrl: string = process.env.NEXT_PUBLIC_BACKEND_SOCKET_URL || "http://localhost:3000";
+const socketUrl: string = process.env.NEXT_PUBLIC_BACKEND_SOCKET_URL || "http://localhost:5000";
 
-// Define the type for the context
-interface SocketContextType {
-  ws: Socket | null;
-  joinRoom: (roomId: string, userId: string) => void;
+interface User {
+  userId: string;
+  userName: string;
 }
 
-// Create a default value for the context
+interface SocketContextType {
+  ws: Socket | null;
+  joinRoom: (roomId: string, user: User) => void;
+}
+
 const defaultValue: SocketContextType = {
   ws: null,
   joinRoom: () => {},
 };
 
-// Create the context with the default value
 export const SocketContext = createContext<SocketContextType>(defaultValue);
 
-// Define the provider component
 export const SocketClientProvider = ({ children }: { children: ReactNode }) => {
   const [ws, setWs] = useState<Socket | null>(null);
 
-  const joinRoom = (roomId: string, userId: string) => {
+  const joinRoom = (roomId: string, user: User) => {
     if (ws) {
-      ws.emit('join-room', roomId, userId);
+      ws.emit('join-room', roomId, user);
     }
   };
 
@@ -51,7 +51,6 @@ export const SocketClientProvider = ({ children }: { children: ReactNode }) => {
       setWs(null);
     });
 
-    // Clean up the connection when the component unmounts
     return () => {
       socket.disconnect();
     };
@@ -64,7 +63,6 @@ export const SocketClientProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-// Create a custom hook to use the SocketContext
 export const useSocket = () => {
   return useContext(SocketContext);
 };

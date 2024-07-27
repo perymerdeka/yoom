@@ -35,3 +35,11 @@ export const avatarImages = [
     '/images/avatar-5.png',
 
 ]
+
+export const rtcSidebarLink = [
+    {
+        imgUrl: "/icons/home.svg",
+        label: "Home",
+        route: "/rtc",
+    },
+]

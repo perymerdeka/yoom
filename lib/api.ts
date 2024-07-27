@@ -1,5 +1,5 @@
 export const createMeeting = async (): Promise<string> => {
-    const response = await fetch('http://localhost:5000/api/create-meeting', {
+    const response = await fetch('http://localhost:5000/api/create-meeting/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

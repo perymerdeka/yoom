@@ -25,6 +25,8 @@
     "clsx": "^2.1.0",
     "lucide-react": "^0.368.0",
     "next": "14.2.0",
+    "peer": "^1.0.2",
+    "peerjs": "^1.5.4",
     "react": "^18",
     "react-datepicker": "^6.9.0",
     "react-dom": "^18",
@@ -35,6 +37,7 @@
   },
   "devDependencies": {
     "@types/node": "^20",
+    "@types/peerjs": "^1.1.0",
     "@types/react": "^18",
     "@types/react-datepicker": "^6.2.0",
     "@types/react-dom": "^18",

@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useSocket } from '@/providers/SocketClientProvider';
+import {Peer, MediaConnection} from 'peerjs';
 import MeetingControls from './MeetingControls';
 import UserVideo from './UserVideo';
 import { useUser } from '@clerk/clerk-react';
+import { useSocket } from '@/providers/SocketClientProvider';
 
 interface RtcMeetingRoomProps {
   meetingId: string;
@@ -22,9 +23,10 @@ const RtcMeetingRoom: React.FC<RtcMeetingRoomProps> = ({ meetingId }) => {
   const [isMicOn, setIsMicOn] = useState(true);
   const [isCameraOn, setIsCameraOn] = useState(true);
   const localStream = useRef<MediaStream | null>(null);
-  const peerConnections = useRef<{ [key: string]: RTCPeerConnection }>({});
+  const peerConnections = useRef<{ [key: string]: MediaConnection }>({});
   const localUserId = user?.id || 'local';
   const localUserName = user?.username || 'You';
+  const peer = useRef<Peer | null>(null);
 
   useEffect(() => {
     const startMedia = async () => {
@@ -34,105 +36,92 @@ const RtcMeetingRoom: React.FC<RtcMeetingRoomProps> = ({ meetingId }) => {
           { userId: localUserId, userName: localUserName, isMuted: !isMicOn, stream: localStream.current }
         ]);
       } catch (err) {
-        console.error('Error accessing media devices:', err);
+        console.error('Error accessing media devices.', err);
       }
     };
 
     startMedia();
-  }, [localUserId, localUserName, isMicOn]);
+
+    // Initialize PeerJS
+    peer.current = new Peer(localUserId, {
+      host: 'localhost',
+      port: 8001, // This should match the port defined in setupPeerServer
+      path: '/peerjs',
+
+    });
+
+    peer.current.on('open', id => {
+      console.log(`Peer connected with ID: ${id}`);
+      // Notify other peers via Socket.IO
+      if (ws) {
+        ws.emit('join-room', meetingId, { userId: localUserId, userName: localUserName });
+      }
+    });
+
+    peer.current.on('call', call => {
+      if (localStream.current) {
+        call.answer(localStream.current);
+        call.on('stream', remoteStream => {
+          setUsers(prevUsers => [
+            ...prevUsers,
+            { userId: call.peer, userName: `User ${call.peer}`, isMuted: false, stream: remoteStream }
+          ]);
+        });
+        peerConnections.current[call.peer] = call;
+      }
+    });
+
+    return () => {
+      peer.current?.destroy();
+    };
+  }, [localUserId, localUserName, isMicOn, ws, meetingId]);
 
   useEffect(() => {
     if (!ws) return;
 
     const handleCurrentUsers = (currentUsers: User[]) => {
+      console.log('Current users:', currentUsers);
       setUsers((prevUsers) => [
         ...prevUsers,
         ...currentUsers.filter((u) => u.userId !== localUserId)
       ]);
     };
 
-    const handleUserConnected = async (newUser: { userId: string; userName: string }) => {
+    const handleUserConnected = (newUser: User) => {
+      console.log('User connected:', newUser);
       const { userId, userName } = newUser;
-      const peerConnection = new RTCPeerConnection();
-
-      localStream.current?.getTracks().forEach((track) => {
-        peerConnection.addTrack(track, localStream.current!);
-      });
-
-      peerConnection.ontrack = (event) => {
-        setUsers((prevUsers) => [
-          ...prevUsers,
-          { userId, userName, isMuted: false, stream: event.streams[0] }
-        ]);
-      };
-
-      peerConnection.onicecandidate = (event) => {
-        if (event.candidate) {
-          ws.emit('ice-candidate', event.candidate, userId);
+      if (peer.current && localStream.current) {
+        const call = peer.current.call(userId, localStream.current);
+        if (call) {
+          call.on('stream', remoteStream => {
+            setUsers(prevUsers => [
+              ...prevUsers,
+              { userId, userName, isMuted: false, stream: remoteStream }
+            ]);
+          });
+          peerConnections.current[userId] = call;
         }
-      };
-
-      peerConnections.current[userId] = peerConnection;
-
-      const offer = await peerConnection.createOffer();
-      await peerConnection.setLocalDescription(offer);
-      ws.emit('offer', offer, userId);
+      }
     };
 
-    const handleOffer = async (offer: RTCSessionDescriptionInit, userId: string) => {
-      const peerConnection = new RTCPeerConnection();
-
-      localStream.current?.getTracks().forEach((track) => {
-        peerConnection.addTrack(track, localStream.current!);
-      });
-
-      peerConnection.ontrack = (event) => {
-        setUsers((prevUsers) => [
-          ...prevUsers,
-          { userId, userName: `User ${userId}`, isMuted: false, stream: event.streams[0] }
-        ]);
-      };
-
-      peerConnection.onicecandidate = (event) => {
-        if (event.candidate) {
-          ws.emit('ice-candidate', event.candidate, userId);
-        }
-      };
-
-      peerConnections.current[userId] = peerConnection;
-
-      await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-      const answer = await peerConnection.createAnswer();
-      await peerConnection.setLocalDescription(answer);
-      ws.emit('answer', answer, userId);
-    };
-
-    const handleAnswer = async (answer: RTCSessionDescriptionInit, userId: string) => {
-      const peerConnectionX = peerConnections.current[userId];
-      if (!peerConnectionX) return;
-      await peerConnectionX.setRemoteDescription(new RTCSessionDescription(answer));
-    };
-
-    const handleIceCandidate = (candidate: RTCIceCandidateInit, userId: string) => {
-      const peerConnectionX = peerConnections.current[userId];
-      if (!peerConnectionX) return;
-      peerConnectionX.addIceCandidate(new RTCIceCandidate(candidate));
+    const handleUserDisconnected = (userId: string) => {
+      setUsers((prevUsers) => prevUsers.filter((user) => user.userId !== userId));
+      if (peerConnections.current[userId]) {
+        peerConnections.current[userId].close();
+        delete peerConnections.current[userId];
+      }
     };
 
     ws.on('current-users', handleCurrentUsers);
     ws.on('user-connected', handleUserConnected);
-    ws.on('offer', handleOffer);
-    ws.on('answer', handleAnswer);
-    ws.on('ice-candidate', handleIceCandidate);
+    ws.on('user-disconnected', handleUserDisconnected);
 
     return () => {
       ws.off('current-users', handleCurrentUsers);
       ws.off('user-connected', handleUserConnected);
-      ws.off('offer', handleOffer);
-      ws.off('answer', handleAnswer);
-      ws.off('ice-candidate', handleIceCandidate);
+      ws.off('user-disconnected', handleUserDisconnected);
     };
-  }, [ws, localUserId, meetingId]);
+  }, [ws, localUserId]);
 
   const handleMicToggle = () => {
     setIsMicOn((prev) => {
@@ -150,8 +139,8 @@ const RtcMeetingRoom: React.FC<RtcMeetingRoomProps> = ({ meetingId }) => {
 
   const handleEndCall = () => {
     console.log('End call');
-    Object.values(peerConnections.current).forEach((peerConnection) => {
-      peerConnection.close();
+    Object.values(peerConnections.current).forEach(mediaConnection => {
+      mediaConnection.close();
     });
     setUsers([]);
   };
@@ -159,7 +148,7 @@ const RtcMeetingRoom: React.FC<RtcMeetingRoomProps> = ({ meetingId }) => {
   return (
     <div className='flex flex-col items-center justify-center h-screen w-full bg-gray-900 text-white'>
       <div className="grid grid-cols-3 gap-4 p-4">
-        {users.map((user) => (
+        {users.map(user => (
           <UserVideo key={user.userId} stream={user.stream} userName={user.userName} isMuted={user.isMuted} />
         ))}
       </div>

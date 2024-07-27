@@ -1,6 +1,17 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faMicrophone, faMicrophoneSlash, faVideo, faVideoSlash, faClosedCaptioning, faSmile, faDesktop, faHandPaper, faEllipsisH, faPhoneSlash } from '@fortawesome/free-solid-svg-icons';
+import { 
+  faMicrophone, 
+  faMicrophoneSlash, 
+  faVideo, 
+  faVideoSlash, 
+  faClosedCaptioning, 
+  faSmile, 
+  faDesktop, 
+  faHandPaper, 
+  faEllipsisH, 
+  faPhoneSlash 
+} from '@fortawesome/free-solid-svg-icons';
 
 interface MeetingControlsProps {
   isMicOn: boolean;

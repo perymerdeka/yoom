@@ -1,9 +1,9 @@
 'use client';
 
-import { createContext, ReactNode, useEffect, useState, useContext } from "react";
+import { createContext, ReactNode, useEffect, useState, useContext } from 'react';
 import { io, Socket } from 'socket.io-client';
 
-const socketUrl: string = process.env.NEXT_PUBLIC_BACKEND_SOCKET_URL || "http://localhost:5000";
+const socketUrl: string = process.env.NEXT_PUBLIC_BACKEND_SOCKET_URL || 'http://localhost:5000';
 
 interface User {
   userId: string;
